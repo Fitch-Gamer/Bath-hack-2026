@@ -14,14 +14,7 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "bath-hack-dev-secret-change-later"
 
-CORS(
-    app,
-    supports_credentials=True,
-    origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-)
+CORS(app)
 
 UPLOAD_DIR.mkdir(exist_ok=True)
 
