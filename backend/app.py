@@ -27,33 +27,19 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+    # Prefer executing SQL from schema.sql so schema can be managed separately.
+    schema_path = BASE_DIR / "schema.sql"
 
-        CREATE TABLE IF NOT EXISTS sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            session_token TEXT NOT NULL UNIQUE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            expires_at TIMESTAMP NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
+    schema = schema_path.read_text(encoding="utf-8")
 
-        CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            processed BOOLEAN NOT NULL DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
-        """
-    )
+    # Ensure statements end with semicolons for executescript.
+    try:
+        schema = re.sub(r"\)\s*(\n|$)", ");\n", schema)
+    except Exception:
+        # if something goes wrong with normalization, fall back to raw schema
+        pass
+
+    conn.executescript(schema)
     conn.commit()
     conn.close()
 
@@ -382,7 +368,7 @@ def analyse():
         }
     )
 
-@post("/api/listreports")
+@app.post("/api/listreports")
 def list_reports():
     user_id = session.get("user_id")
 
