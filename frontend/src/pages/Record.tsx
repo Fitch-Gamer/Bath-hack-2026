@@ -192,7 +192,7 @@ export default function PresentationMock() {
                 onClick={() => { setView('setup'); setPermissionsGranted(false); }}
                 className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
             >
-                <Square size={16} /> New Session
+                New Session
             </button>
             </div>
 
