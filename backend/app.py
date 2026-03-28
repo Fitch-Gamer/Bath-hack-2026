@@ -34,14 +34,31 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    conn.execute(
+    conn.executescript(
         """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
+        );
+
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            session_token TEXT NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            processed BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
         """
     )
     conn.commit()
@@ -369,6 +386,33 @@ def analyse():
             "flags": flags,
             "loggedIn": bool(session.get("user_id")),
             "username": session.get("username"),
+        }
+    )
+
+@post("/api/listreports")
+def list_reports():
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "You must be logged in to view reports."}), 401
+
+    conn = get_db_connection()
+    reports = conn.execute(
+        "SELECT id, processed, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC",
+        (user_id,),
+    ).fetchall()
+    conn.close()
+
+    return jsonify(
+        {
+            "reports": [
+                {
+                    "id": r["id"],
+                    "processed": bool(r["processed"]),
+                    "created_at": r["created_at"],
+                }
+                for r in reports
+            ]
         }
     )
 
