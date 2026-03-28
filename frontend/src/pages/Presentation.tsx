@@ -39,7 +39,7 @@ const GazeDot = (props) => {
             cx={cx}
             cy={cy}
             r={4}
-            fill={payload.gaze ? '#' : '#'}
+            fill={payload.gaze ? '#10b981' : '#f43f5e'}
             stroke='#fff'
             strokeWidth={1}
         />
@@ -126,7 +126,7 @@ export default function PresentationMock() {
                 </button>
 
                 <button 
-                    onClick={() => { setView('recording'); setTimeLeft(60); }}
+                    onClick={() => { setView('recording'); setTimeLeft(6); }}
                     disabled={!permissionsGranted}
                     className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-colors ${
                         permissionsGranted 
@@ -236,8 +236,8 @@ export default function PresentationMock() {
                 </div>
             </div>
 
-            <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+            <div className="h-72 w-full" style={{ minWidth: '300px', minHeight: '250px' }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                 <LineChart data={MOCK_SESSION_DATA} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis 
