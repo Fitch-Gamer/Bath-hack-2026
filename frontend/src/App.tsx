@@ -1,4 +1,4 @@
-import PresentationMock from './Presentation.tsx';
+import PresentationMock from './pages/Presentation.js';
 import './index.css';
 
 
