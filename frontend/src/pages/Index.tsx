@@ -5,12 +5,32 @@ const Index: React.FC = () => {
 	const navigate = useNavigate()
 
 	return (
-		<div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-			<div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, width: 360 }}>
-				<button onClick={() => navigate('/record')} style={{ padding: '12px 16px', fontSize: 16 }}>Record</button>
-				<button onClick={() => navigate('/reports')} style={{ padding: '12px 16px', fontSize: 16 }}>Reports</button>
-				<button onClick={() => navigate('/leaderboard')} style={{ padding: '12px 16px', fontSize: 16 }}>Leaderboard</button>
-				<button onClick={() => navigate('/settings')} style={{ padding: '12px 16px', fontSize: 16 }}>Settings</button>
+		<div className="flex h-screen items-center justify-center">
+			<div className="grid grid-cols-2 gap-4 w-[360px]">
+				<button
+					onClick={() => navigate('/record')}
+					className="py-3 px-4 text-base bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				>
+					Record
+				</button>
+				<button
+					onClick={() => navigate('/reports')}
+					className="py-3 px-4 text-base bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				>
+					Reports
+				</button>
+				<button
+					onClick={() => navigate('/leaderboard')}
+					className="py-3 px-4 text-base bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				>
+					Leaderboard
+				</button>
+				<button
+					onClick={() => navigate('/settings')}
+					className="py-3 px-4 text-base bg-blue-600 text-white rounded shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+				>
+					Settings
+				</button>
 			</div>
 		</div>
 	)
