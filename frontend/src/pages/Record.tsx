@@ -105,9 +105,9 @@ export default function PresentationMock() {
     };
 
     const renderSetup = () => (
-        <div className="flex flex-col items-center justify-center min-h-[600px] bg-slate-50 text-slate-800 p-8 rounded-xl shadow-sm border border-slate-200">
-            <h1 className="text-3xl font-bold mb-4">60-Second Pressure Drill</h1>
-            <p className="text-slate-600 mb-8 max-w-md text-center">
+        <div className="flex flex-col items-center justify-center min-h-[600px] bg-[var(--card)] text-[var(--on-surface)] p-8 rounded-xl shadow-[var(--shadow)] border border-[var(--border)]">
+            <h1 className="text-3xl font-bold text-[var(--on-surface)] mb-4">60-Second Pressure Drill</h1>
+            <p className="text- mb-8 max-w-md text-center">
                 You will be presented with a prompt. Speak continuously for 60 seconds. Our system will track your speaking pace, eye contact, and test your focus with random audio distractions.
             </p>
             
@@ -117,7 +117,7 @@ export default function PresentationMock() {
                     className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-colors ${
                         permissionsGranted 
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default' 
-                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                        : 'bg-[var(--card)] text-[var(--on-surface)] border border-[var(--border)] hover:bg-[var(--surface)]'
                     }`}
                     disabled={permissionsGranted}
                 >
@@ -126,12 +126,12 @@ export default function PresentationMock() {
                 </button>
 
                 <button 
-                    onClick={() => { setView('recording'); setTimeLeft(6); }}
+                    onClick={() => { setView('recording'); setTimeLeft(60); }}
                     disabled={!permissionsGranted}
                     className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-colors ${
                         permissionsGranted 
                         ? 'bg-blue-600 hover:bg-blue-700 shadow-md' 
-                        : 'bg-slate-300 cursor-not-allowed'
+                        : 'bg-[var(--danger)] text-[var(--on-surface)] border border-[var(--border)] cursor-not-allowed'
                     }`}
                 >
                     <Play size={20} />
