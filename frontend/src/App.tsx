@@ -1,12 +1,18 @@
-import PresentationMock from './pages/Presentation.js';
+import PresentationMock from './pages/Presentation';
 import './index.css';
+import Index from './pages/Index';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 
 function App() {
   return (
-    <div className='min-h-screen bg-slate-50'>
-      <PresentationMock/>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Index/>} />
+        <Route path="/record" element={<PresentationMock/>} />
+      </Routes>
+    </Router>
+
   )
 }
 
