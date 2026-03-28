@@ -6,7 +6,7 @@ import Record from './pages/Record';
 import './index.css';
 import Index from './pages/Index';
 import Settings from './pages/Settings';
-import Login from './pages/login';
+import Login from './pages/Login';
 import Signup from './pages/Signup';
 
 function App() {
