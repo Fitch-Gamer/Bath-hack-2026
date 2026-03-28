@@ -40,6 +40,9 @@ function App() {
                 <Link className="rounded-lg px-3 py-1 hover:bg-[var(--surface)]" to="/settings">
                   Settings
                 </Link>
+                <Link className="rounded-lg px-3 py-1 hover:bg-[var(--surface)]" to="/login">
+                  Sign in
+                </Link>
               </nav>
 
               <button
