@@ -430,14 +430,6 @@ def list_reports():
         }
     )
 
-@app.get("/api/testset")
-def testset():
-    session["test"] = "This is a test session value."
-    return jsonify({"message": "Test endpoint is working."})
-
-@app.get("/api/testget")
-def testget():
-    return jsonify({"message": f"session token: {session.get('test')}"})
 @app.post("/api/uploadpresentation")
 def upload_presentation():
     user_id = session.get("user_id")
@@ -474,6 +466,69 @@ def upload_presentation():
 
     return jsonify({"message": "Presentation registered.", "report_id": report_id, "filename": filepath})
 
+@app.post("/api/savesettings")
+def save_settings():
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "You must be logged in to save settings."}), 401
+
+    data = request.get_json(silent=True) or {}
+    recording_time_seconds = data.get("recording_time_seconds")
+    prep_time_seconds = data.get("prep_time_seconds")
+    bio = str(data.get("bio", "")).strip()
+    camera_enabled = data.get("camera_enabled")
+    gaze_enabled = data.get("gaze_enabled")
+    disfluency_enabled = data.get("disfluency_enabled")
+    report_metrics_enabled = data.get("report_metrics_enabled")
+
+    conn = get_db_connection()
+    conn.execute(
+        "UPDATE users SET recording_time_seconds = ?, prep_time_seconds = ?, bio = ?, camera_enabled = ?, gaze_enabled = ?, disfluency_enabled = ?, report_metrics_enabled = ? WHERE id = ?",
+        (
+            recording_time_seconds,
+            prep_time_seconds,
+            bio,
+            bool(camera_enabled),
+            bool(gaze_enabled),
+            bool(disfluency_enabled),
+            bool(report_metrics_enabled),
+            user_id,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Settings saved successfully."})
+
+@app.post("/api/getsettings")
+def get_settings():
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "You must be logged in to get settings."}), 401
+
+    conn = get_db_connection()
+    user = conn.execute(
+        "SELECT recording_time_seconds, prep_time_seconds, bio, camera_enabled, gaze_enabled, disfluency_enabled, report_metrics_enabled FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+
+    if not user:
+        return jsonify({"error": "User not found."}), 404
+
+    return jsonify(
+        {
+            "recording_time_seconds": user["recording_time_seconds"],
+            "prep_time_seconds": user["prep_time_seconds"],
+            "bio": user["bio"],
+            "camera_enabled": bool(user["camera_enabled"]),
+            "gaze_enabled": bool(user["gaze_enabled"]),
+            "disfluency_enabled": bool(user["disfluency_enabled"]),
+            "report_metrics_enabled": bool(user["report_metrics_enabled"]),
+        }
+    )
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
