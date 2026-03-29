@@ -9,3 +9,4 @@ backend/users.db
 backend/uploads/
 __pycache__/
 *.pyc
+.idea
