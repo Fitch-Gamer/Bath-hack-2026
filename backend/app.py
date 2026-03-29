@@ -10,6 +10,8 @@ from datetime import datetime
 import threading
 from llm.main import promptgen
 from gazeAI.main import gaze
+from whisperAI.main import nlp
+import subprocess
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "users.db"
@@ -220,6 +222,23 @@ def processreport(report_id,filepath):
         print("started")
         gaze_response=gaze(f"{UPLOAD_DIR}/video/{filepath}.webm")
 
+        input_file = f"{UPLOAD_DIR}/video/{filepath}.webm"
+        output_file = f"{UPLOAD_DIR}/video/{filepath}.wav"
+
+        subprocess.run([
+            "ffmpeg",
+            "-i", input_file,
+            "-vn",
+            "-ar", "22050",
+            "-ac", "1",
+            "-sample_fmt", "s16",
+            output_file
+        ])
+
+        nlp_response = nlp(output_file)
+
+
+        print(nlp_response)
         print(gaze_response)
 
         gaze_array  = gaze_response.split(",")
