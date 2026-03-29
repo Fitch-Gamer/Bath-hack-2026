@@ -34,7 +34,7 @@ const Signup: React.FC = () => {
 
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data.message || `Request failed (${res.status})`)
+        setError(data.error || data.message || `Request failed (${res.status})`)
         return
       }
 
