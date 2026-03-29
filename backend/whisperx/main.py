@@ -146,7 +146,7 @@ def build_timeline(duration, disfluencies, fillers, pauses, time_step=0.1):
     return timeline
 
 
-def nlp(input_path: str):
+def main(input_path: str):
     text, words = transcribe_and_align(input_path)
 
     repetitions = detect_repetitions(words)
@@ -177,6 +177,6 @@ if __name__ == "__main__":
     parser.add_argument("--wav", required=True)
     args = parser.parse_args()
 
-    result, pace = nlp(args.wav)
+    result, pace = main(args.wav)
     print("Disfluency timeline:", result)
     print("Pace (words/sec):", pace)
