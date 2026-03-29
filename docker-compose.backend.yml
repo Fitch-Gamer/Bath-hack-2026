@@ -4,19 +4,9 @@ services:
     build:
       context: ./backend
     ports:
-      - "5000:5000"
+      - "80:5000"
     environment:
       - FLASK_ENV=production
       - OPENAI_API_KEY=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
     volumes:
       - ./backend:/app
-
-  frontend:
-    build:
-      context: ./frontend
-    ports:
-      - "3000:80"
-    volumes:
-      - ./frontend:/app
-    environment:
-      - NODE_ENV=production

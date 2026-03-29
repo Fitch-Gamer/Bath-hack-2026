@@ -6,17 +6,17 @@ import cv2
 import numpy as np
 import torch
 
-from l2cs import select_device, Pipeline
+from .l2cs import select_device, Pipeline
 
 THRESHOLD = 10
 
 
-def main(input_path: str):
+def gaze(input_path: str):
     capture = cv2.VideoCapture(input_path)
     if not capture.isOpened():
         raise IOError(f"Cannot open {input_path}!")
 
-    pipeline = Pipeline(weights=Path("models/L2CSNet_gaze360.pkl"), arch="ResNet50", device=select_device("cpu"), )
+    pipeline = Pipeline(weights=Path("gazeAI/models/L2CSNet_gaze360.pkl"), arch="ResNet50", device=select_device("cpu"), )
 
     gaze_history = []
     frame_count = 0
@@ -53,5 +53,5 @@ if __name__ == "__main__":
     parser.add_argument('--video', type=str, required=True)
     args = parser.parse_args()
 
-    result = main(args.video)
+    result = gaze(args.video)
     print(result)
