@@ -63,7 +63,7 @@ const Settings: React.FC = () => {
             onChange={(event) => update({ userBio: event.target.value })}
             rows={4}
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm text-[var(--on-surface)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/30"
-            placeholder="Describe yourself for personalized prompts..."
+            placeholder="Describe yourself for personalised prompts..."
           />
           <p className="mt-1 text-xs text-[var(--muted)]">Your bio is saved immediately and used for future prompt personalisation.</p>
         </div>

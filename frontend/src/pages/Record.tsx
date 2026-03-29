@@ -1,63 +1,91 @@
-import React, {useEffect, useState, useRef, useCallback} from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Webcam from 'react-webcam';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
-  ResponsiveContainer, ReferenceLine 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine,
+  ResponsiveContainer,
 } from 'recharts';
-import { Camera, Mic, Play, Square, Activity, Eye, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Camera, Mic, Play, Activity, Eye, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
+import babyCry from '../audio/baby-crying.mp3';
+import belchyBurp from '../audio/belchy-burp.mp3';
+import coughingMan from '../audio/coughing-man.mp3';
+import coughingWoman from '../audio/coughing-woman.mp3';
+import crispPacket from '../audio/crisp-packet.mp3';
+import dudududu from '../audio/dudududu.mp3';
+import iphoneNote from '../audio/iphone-note.mp3';
+import phoneRing from '../audio/phone-ring.mp3';
+import sneezeMan from '../audio/sneeze-man.mp3';
+
+const AUDIO_CLIPS = [
+  babyCry,
+  belchyBurp,
+  coughingMan,
+  coughingWoman,
+  crispPacket,
+  dudududu,
+  iphoneNote,
+  phoneRing,
+  sneezeMan,
+];
 
 const generateMockData = () => {
-    const data = [];
-    const distractions = [15, 38, 52];
-    let currentWPM = 130;
+  const data = [];
+  const distractions = [15, 38, 52];
+  let currentWPM = 130;
 
-    for (let i = 0; i <= 60; i++) {
-        const fluctuation = Math.floor(Math.random() * 15) - 7;
-        currentWPM = Math.max(90, Math.min(180, currentWPM + fluctuation))
+  for (let i = 0; i <= 60; i++) {
+    const fluctuation = Math.floor(Math.random() * 15) - 7;
+    currentWPM = Math.max(90, Math.min(180, currentWPM + fluctuation));
 
-        const isDistractionNear = distractions.some(d => Math.abs(d - i) <= 2);
-        const gaze = isDistractionNear ? Math.random() > 0.7 : Math.random() > 0.15;
+    const isDistractionNear = distractions.some((d) => Math.abs(d - i) <= 2);
+    const gaze = isDistractionNear ? Math.random() > 0.7 : Math.random() > 0.15;
 
-        data.push({
-            time: i,
-            wpm: currentWPM,
-            gaze: gaze,
-            isDistraction: distractions.includes(i)
-        });
-    }
-    return { data, distractions };
+    data.push({
+      time: i,
+      wpm: currentWPM,
+      gaze,
+      isDistraction: distractions.includes(i),
+    });
+  }
+
+  return { data, distractions };
 };
 
 const { data: MOCK_SESSION_DATA, distractions: MOCK_DISTRACTIONS } = generateMockData();
 
-const GazeDot = (props) => {
-    const { cx, cy, payload } = props;
-    if (!cx || !cy) return null;
+const GazeDot = ({ cx, cy, payload }: any) => {
+  if (cx === undefined || cy === undefined) return null;
 
-    return (
-        <circle
-            cx={cx}
-            cy={cy}
-            r={4}
-            fill={payload.gaze ? '#10b981' : '#f43f5e'}
-            stroke='#fff'
-            strokeWidth={1}
-        />
-    );
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={4}
+      fill={payload.gaze ? '#10b981' : '#f43f5e'}
+      stroke='#fff'
+      strokeWidth={1}
+    />
+  );
 };
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-md text-sm">
-        <p className="font-bold text-slate-800 mb-1">{`Time: ${label}s`}</p>
-        <p className="text-blue-600">{`Speed: ${data.wpm} WPM`}</p>
-        <p className={data.gaze ? "text-emerald-600" : "text-rose-600"}>
-          {data.gaze ? "Looking at camera" : "Looking away"}
+      <div className='bg-white p-3 border border-slate-200 shadow-lg rounded-md text-sm'>
+        <p className='font-bold text-slate-800 mb-1'>{`Time: ${label}s`}</p>
+        <p className='text-blue-600'>{`Speed: ${data.wpm} WPM`}</p>
+        <p className={data.gaze ? 'text-emerald-600' : 'text-rose-600'}>
+          {data.gaze ? 'Looking at camera' : 'Looking away'}
         </p>
         {data.isDistraction && (
-          <p className="text-amber-500 font-semibold mt-1 flex items-center gap-1">
+          <p className='text-amber-500 font-semibold mt-1 flex items-center gap-1'>
             <AlertCircle size={14} /> Distraction Played
           </p>
         )}
@@ -68,225 +96,438 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function PresentationMock() {
-    const [view, setView] = useState(`setup`);
-    const [permissionsGranted, setPermissionsGranted] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(60);
-    const webcamRef = useRef(null);
+  const { settings, setSettings } = useSettings();
+  const [view, setView] = useState<'setup' | 'prep' | 'recording' | 'results'>('setup');
+  const [recordingMode, setRecordingMode] = useState<'video' | 'audio'>('video');
+  const [permissionsGranted, setPermissionsGranted] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(settings.recordDuration);
+  const [isRecording, setIsRecording] = useState(false);
+  const [sessionStats, setSessionStats] = useState({ avgWpm: 0, gazePercentage: 0 });
+  const webcamRef = useRef<Webcam>(null);
+  const activeStreamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const distractionTimerRef = useRef<number | null>(null);
 
-    const requestPermissions = async () => {
-        try {
-            // simulate approval
-            setTimeout(() => setPermissionsGranted(true), 500);
-        } catch (err) {
-            console.error("Permission denied.", err)
-        }
+  const canCameraRun = settings.useCamera && cameraActive && permissionsGranted;
+  const canRecord = recordingMode === 'video' ? canCameraRun : true;
+
+  useEffect(() => {
+    setTimeLeft(settings.recordDuration);
+  }, [settings.recordDuration]);
+
+  useEffect(() => {
+    if (settings.useCamera && !cameraActive && !permissionsGranted && view === 'setup') {
+      startCamera();
+    }
+  }, [settings.useCamera, cameraActive, permissionsGranted, view]);
+
+  const startCamera = async () => {
+    if (!settings.useCamera) {
+      setSettings((prev) => ({ ...prev, useCamera: true }));
     }
 
-    useEffect(() => {
-        let timer;
-        if (view == 'recording' && timeLeft > 0) {
-            timer = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-                // send data to websockets
-                // receive gaze boolean and wpm
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: { frameRate: 10, width: 1280, height: 720 },
+      });
+      activeStreamRef.current = stream;
+      setPermissionsGranted(true);
+      setCameraActive(true);
+    } catch (err) {
+      console.error('Camera permission problem', err);
+      setPermissionsGranted(false);
+    }
+  };
 
-            }, 1000);
-        } else if (view === 'recording' && timeLeft === 0) {
-            setView('results');
+  const recordSnapshot = (blob: Blob, mode: 'video' | 'audio') => {
+    const formData = new FormData();
+    formData.append('file', blob, mode === 'audio' ? 'session-audio.webm' : 'session-video.webm');
+
+    fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    }).catch((err) => console.error('Upload failed', err));
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+
+    if (distractionTimerRef.current) {
+      window.clearInterval(distractionTimerRef.current);
+      distractionTimerRef.current = null;
+    }
+
+    if (activeStreamRef.current) {
+      activeStreamRef.current.getTracks().forEach((track) => track.stop());
+      activeStreamRef.current = null;
+    }
+
+    setIsRecording(false);
+    setView('results');
+    setSessionStats(calculateStats());
+  };
+
+  const beginRecording = async () => {
+    if (recordingMode === 'video' && (!cameraActive || !permissionsGranted)) {
+      await startCamera();
+    }
+
+    if (!canRecord) {
+      if (recordingMode === 'video') {
+        alert('Camera not ready. Please enable camera preview first or use audio-only mode.');
+      }
+      setView('setup');
+      return;
+    }
+
+    let stream: MediaStream | null = null;
+
+    if (recordingMode === 'video') {
+      stream = activeStreamRef.current || (webcamRef.current as any)?.stream;
+      if (!stream || !canCameraRun) {
+        alert('Video recording not ready. Please enable camera preview first.');
+        setView('setup');
+        return;
+      }
+    } else {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        console.error('Audio permission problem', err);
+        setView('setup');
+        return;
+      }
+    }
+
+    if (!stream) {
+      console.warn('No media stream available for recording.');
+      setView('setup');
+      return;
+    }
+
+    activeStreamRef.current = stream;
+    recordedChunksRef.current = [];
+
+    const options = { mimeType: 'video/webm;codecs="vp8, opus"', videoBitsPerSecond: 2_000_000 };
+    const mediaRecorder = new MediaRecorder(stream, options);
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        recordedChunksRef.current.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunksRef.current, { type: recordingMode === 'audio' ? 'audio/webm' : 'video/webm' });
+      recordSnapshot(blob, recordingMode);
+    };
+
+    mediaRecorder.start(100);
+    mediaRecorderRef.current = mediaRecorder;
+    setIsRecording(true);
+    setView('recording');
+    setTimeLeft(settings.recordDuration);
+
+    if (settings.enableDistractions) {
+      distractionTimerRef.current = window.setInterval(() => {
+        if (Math.random() < 0.33) {
+          const randomClip = AUDIO_CLIPS[Math.floor(Math.random() * AUDIO_CLIPS.length)];
+          const audio = new Audio(randomClip);
+          audio.volume = 0.76;
+          audio.play().catch(() => {});
         }
-        return () => clearInterval(timer);
-    }, [view, timeLeft]);
+      }, 5000);
+    }
+  };
 
-    const calculateStats = () => {
-        const avgWpm = Math.round(MOCK_SESSION_DATA.reduce((acc, curr) => acc + curr.wpm, 0) / MOCK_SESSION_DATA.length);
-        const gazeTime = MOCK_SESSION_DATA.filter(d => d.gaze).length;
-        const gazePercentage = Math.round((gazeTime / MOCK_SESSION_DATA.length) * 100);
-        return { avgWpm, gazePercentage };
-    };
+  useEffect(() => {
+    if (view !== 'prep') return;
 
-    const renderSetup = () => (
-        <div className="flex flex-col items-center justify-center min-h-[600px] bg-[var(--card)] text-[var(--on-surface)] p-8 rounded-xl shadow-[var(--shadow)] border border-[var(--border)]">
-            <h1 className="text-3xl font-bold text-[var(--on-surface)] mb-4">60-Second Pressure Drill</h1>
-            <p className="text- mb-8 max-w-md text-center">
-                You will be presented with a prompt. Speak continuously for 60 seconds. Our system will track your speaking pace, eye contact, and test your focus with random audio distractions.
-            </p>
-            
-            <div className="flex flex-col gap-4 w-full max-w-xs">
-                <button 
-                    onClick={requestPermissions}
-                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-colors ${
-                        permissionsGranted 
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-default' 
-                        : 'bg-[var(--card)] text-[var(--on-surface)] border border-[var(--border)] hover:bg-[var(--surface)]'
-                    }`}
-                    disabled={permissionsGranted}
-                >
-                    {permissionsGranted ? <CheckCircle2 size={20} /> : <Camera size={20} />}
-                    {permissionsGranted ? 'Camera & Mic Ready' : 'Enable Camera & Mic'}
-                </button>
+    if (timeLeft <= 0) {
+      beginRecording();
+      return;
+    }
 
-                <button 
-                    onClick={() => { setView('recording'); setTimeLeft(60); }}
-                    disabled={!permissionsGranted}
-                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-colors ${
-                        permissionsGranted 
-                        ? 'bg-blue-600 hover:bg-blue-700 shadow-md' 
-                        : 'bg-[var(--danger)] text-[var(--on-surface)] border border-[var(--border)] cursor-not-allowed'
-                    }`}
-                >
-                    <Play size={20} />
-                    Start Drill
-                </button>
-            </div>
-        </div>
+    const timer = window.setTimeout(() => setTimeLeft((t) => t - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [view, timeLeft]);
+
+  useEffect(() => {
+    if (view !== 'recording') return;
+
+    if (timeLeft <= 0) {
+      stopRecording();
+      return;
+    }
+
+    const timer = window.setTimeout(() => setTimeLeft((t) => t - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [view, timeLeft]);
+
+  const calculateStats = () => {
+    const avgWpm = Math.round(
+      MOCK_SESSION_DATA.reduce((acc, curr) => acc + curr.wpm, 0) / MOCK_SESSION_DATA.length,
     );
+    const gazeTime = MOCK_SESSION_DATA.filter((d) => d.gaze).length;
+    const gazePercentage = Math.round((gazeTime / MOCK_SESSION_DATA.length) * 100);
+    return { avgWpm, gazePercentage };
+  };
 
-    const renderRecording = () => (
-        <div className="flex flex-col items-center min-h-[600px] bg-slate-900 text-white p-6 rounded-xl relative overflow-hidden">
-        {/* High-pressure minimalistic UI */}
-        <div className="w-full max-w-3xl mb-6 bg-slate-800 border border-slate-700 p-6 rounded-xl text-center shadow-lg">
-            <p className="text-sm text-slate-400 uppercase tracking-widest mb-2 font-semibold">Current Prompt</p>
-            <h2 className="text-2xl font-medium text-slate-100">"Explain a complex technical concept to a non-technical stakeholder."</h2>
-        </div>
+  const beginSession = async (mode: 'video' | 'audio') => {
+    setRecordingMode(mode);
 
-        <div className="relative w-full max-w-3xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-slate-700">
-            {permissionsGranted && (
-            <Webcam 
-                audio={true}
-                ref={webcamRef}
-                muted={true} // Muted locally to prevent feedback loop
-                className="w-full h-full object-cover"
-            />
-            )}
-            
-            {/* Recording Indicator & Timer Overlay */}
-            <div className="absolute top-4 right-4 flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-600/50">
-                <div className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-                <span className="text-sm font-medium tracking-wide">REC</span>
-            </div>
-            </div>
+    if (mode === 'video') {
+      if (!cameraActive || !permissionsGranted) {
+        await startCamera();
+      }
+    } else {
+      setCameraActive(false);
+    }
 
-            <div className="absolute bottom-6 left-0 right-0 flex justify-center">
-            <div className="bg-black/70 backdrop-blur-md px-8 py-3 rounded-full border border-slate-600/50">
-                <span className={`text-4xl font-mono font-bold ${timeLeft <= 10 ? 'text-rose-500' : 'text-white'}`}>
-                    00:{timeLeft.toString().padStart(2, '0')}
-                </span>
-            </div>
-            </div>
-        </div>
-        </div>
-    );
+    setView('prep');
+    setTimeLeft(settings.prepDuration);
+  };
 
-    const renderResults = () => {
-        const stats = calculateStats();
-
-        return (
-        <div className="flex flex-col min-h-[600px] bg-slate-50 text-slate-800 p-8 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex justify-between items-end mb-8">
-            <div>
-                <h2 className="text-3xl font-bold text-slate-900">Session Analysis</h2>
-                <p className="text-slate-500 mt-1">Review your 60-second drill performance.</p>
-            </div>
-            <button 
-                onClick={() => { setView('setup'); setPermissionsGranted(false); }}
-                className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"
-            >
-                New Session
-            </button>
-            </div>
-
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
-                <Activity size={28} />
-                </div>
-                <div>
-                <p className="text-sm text-slate-500 font-medium">Average Speaking Pace</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.avgWpm} <span className="text-lg font-normal text-slate-500">WPM</span></p>
-                </div>
-            </div>
-            
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
-                <Eye size={28} />
-                </div>
-                <div>
-                <p className="text-sm text-slate-500 font-medium">Eye Contact Maintained</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.gazePercentage}% <span className="text-lg font-normal text-slate-500">of session</span></p>
-                </div>
-            </div>
-            </div>
-
-            {/* Timeline Chart */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex-1">
-            <h3 className="text-lg font-semibold text-slate-800 mb-6">Performance Timeline</h3>
-            
-            {/* Custom Legend */}
-            <div className="flex flex-wrap gap-6 mb-6 text-sm text-slate-600">
-                <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-emerald-500" /> Looking at Camera
-                </div>
-                <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-rose-500" /> Looking Away
-                </div>
-                <div className="flex items-center gap-2">
-                <div className="w-4 h-0.5 bg-amber-400 border-t border-dashed border-amber-600" /> Distraction Played
-                </div>
-            </div>
-
-            <div className="h-72 w-full" style={{ minWidth: '300px', minHeight: '250px' }}>
-                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                <LineChart data={MOCK_SESSION_DATA} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis 
-                    dataKey="time" 
-                    type="number" 
-                    domain={[0, 60]} 
-                    tickCount={13} 
-                    stroke="#94a3b8" 
-                    tick={{fill: '#64748b', fontSize: 12}}
-                    tickFormatter={(val) => `${val}s`}
-                    />
-                    <YAxis 
-                    domain={['dataMin - 20', 'dataMax + 20']} 
-                    stroke="#94a3b8"
-                    tick={{fill: '#64748b', fontSize: 12}}
-                    tickFormatter={(val) => `${val} WPM`}
-                    width={80}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    
-                    {/* Distraction Markers */}
-                    {MOCK_DISTRACTIONS.map((time, index) => (
-                    <ReferenceLine key={index} x={time} stroke="#fbbf24" strokeDasharray="4 4" />
-                    ))}
-
-                    {/* Main WPM Line with Custom Gaze Dots */}
-                    <Line 
-                    type="monotone" 
-                    dataKey="wpm" 
-                    stroke="#cbd5e1" 
-                    strokeWidth={2}
-                    dot={<GazeDot />}
-                    activeDot={{ r: 6, strokeWidth: 0 }}
-                    isAnimationActive={true}
-                    />
-                </LineChart>
-                </ResponsiveContainer>
-            </div>
-            </div>
-        </div>
-        );
-    };
+  const renderSetup = () => {
+    const cameraReady = settings.useCamera && cameraActive && permissionsGranted;
 
     return (
-        <div className="w-full max-w-5xl mx-auto p-4 font-sans">
-            {view === 'setup' && renderSetup()}
-            {view === 'recording' && renderRecording()}
-            {view === 'results' && renderResults()}
-        </div>
-    )
+      <div className='flex flex-col items-center justify-center min-h-[600px] bg-[var(--card)] text-[var(--on-surface)] p-8 rounded-xl shadow-[var(--shadow)] border border-[var(--border)]'>
+        <h1 className='text-3xl font-bold text-[var(--on-surface)] mb-4'>{settings.recordDuration}-Second Pressure Drill</h1>
+        <p className='text-sm mb-8 max-w-md text-center text-[var(--muted)]'>
+          You will be presented with a prompt. Speak continuously for {settings.recordDuration} seconds. The app tracks pace, eye contact, and random audio distractions.
+        </p>
 
+        {cameraReady ? (
+          <div className='relative w-full max-w-3xl rounded-xl overflow-hidden border border-[var(--border)]'>
+            <Webcam
+              audio
+              ref={webcamRef}
+              mirrored
+              screenshotFormat='image/jpeg'
+              videoConstraints={{ width: 1280, height: 720, frameRate: 10 }}
+              className='h-[480px] w-full object-cover'
+            />
+            <div className='absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2'>
+              <button
+                onClick={() => beginSession('video')}
+                className='rounded-full bg-[var(--accent)] px-6 py-2 text-sm font-bold text-white shadow-lg hover:bg-[var(--accent-strong)]'
+              >
+                Record video
+              </button>
+              <button
+                onClick={() => beginSession('audio')}
+                className='rounded-full bg-[var(--card)] px-6 py-2 text-sm font-bold text-[var(--on-surface)] shadow-lg hover:bg-[var(--surface)]'
+              >
+                Audio only
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className='rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 space-y-3'>
+            <p className='text-[var(--on-surface)]'>
+              {settings.useCamera ? 'Camera preview initialising; please allow camera access.' : 'Camera preview is disabled in settings.'}
+            </p>
+            <div className='flex flex-wrap gap-2'>
+              <button
+                onClick={startCamera}
+                className='rounded-lg border border-[var(--border)] bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--accent-strong)]'
+              >
+                <Camera size={16} /> Enable camera
+              </button>
+              <button
+                onClick={() => beginSession('audio')}
+                className='rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--on-surface)] hover:bg-[var(--card)]'
+              >
+                <Mic size={16} /> Record audio only
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderRecording = () => {
+    const isVideo = recordingMode === 'video';
+
+    return (
+      <div className='flex flex-col min-h-[600px] bg-[var(--surface)] text-[var(--on-surface)] border border-[var(--border)] p-6 rounded-xl relative overflow-hidden'>
+        <div className='absolute inset-0 bg-[var(--card)]' />
+        <div className='relative z-10 w-full max-w-3xl mx-auto'>
+          <div className='mb-4'>
+            <p className='text-3xl font-semibold'>Recording in progress ({recordingMode === 'audio' ? 'audio only' : 'video'})</p>
+            <p className='text-xs text-[var(--muted)]'>Remaining: {timeLeft}s</p>
+          </div>
+
+          {isVideo ? (
+            cameraActive ? (
+              <div className='mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden'>
+                <Webcam
+                  audio
+                  ref={webcamRef}
+                  mirrored
+                  screenshotFormat='image/jpeg'
+                  videoConstraints={{ width: 1280, height: 720, frameRate: 10 }}
+                  className='h-[440px] w-full object-cover'
+                />
+              </div>
+            ) : (
+              <div className='mb-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 text-center'>
+                <p className='text-slate-200'>Camera preview unavailable during recording.</p>
+              </div>
+            )
+          ) : (
+            <div className='mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center'>
+              <p className='text-sm text-[var(--on-surface)]'>Audio-only recording; no video captured.</p>
+              <p className='text-sm text-[var(--on-surface)] mt-1'>The system captures microphone input and saves separately.</p>
+            </div>
+          )}
+
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+          <div className='rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4'>
+            <p className='text-xs text-[var(--on-surface)]'>Preparation time</p>
+            <p className='font-semibold'>{settings.prepDuration}s</p>
+          </div>
+          <div className='rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4'>
+            <p className='text-xs text-[var(--on-surface)]'>Recording time</p>
+            <p className='font-semibold'>{settings.recordDuration}s</p>
+          </div>
+          <div className='rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4'>
+            <p className='text-xs text-[var(--on-surface)]'>Distractions</p>
+            <p className='font-semibold'>{settings.enableDistractions ? 'On' : 'Off'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    );
+  };
+
+  const renderResults = () => {
+    const stats = sessionStats.avgWpm === 0 ? calculateStats() : sessionStats;
+
+    return (
+      <div className='flex flex-col min-h-[600px] bg-[var(--card)] text-[var(--on-surface)] p-8 rounded-xl border border-[var(--border)] shadow-sm'>
+        <div className='flex justify-between items-end mb-8'>
+          <div>
+            <h2 className='text-3xl font-bold text-[var(--on-card)]'>Session Analysis</h2>
+            <p className='text-[var(--muted)] mt-2'>Review your session performance.</p>
+          </div>
+          <button
+            onClick={() => {
+              setView('setup');
+              setCameraActive(false);
+              setIsRecording(false);
+              setTimeLeft(settings.recordDuration);
+            }}
+            className='flex items-center gap-2 text-sm font-medium text-[var(--muted)] hover:text-blue-600 transition-colors'
+          >
+            New Session
+          </button>
+        </div>
+
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>
+          <div className='bg-[var(--card)] p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4'>
+            <div className='p-3 bg-blue-50 text-blue-600 rounded-lg'>
+              <Activity size={28} />
+            </div>
+            <div>
+              <p className='text-sm text-slate-500 font-medium'>Average Speaking Pace</p>
+              <p className='text-2xl font-bold text-slate-900'>
+                {stats.avgWpm} <span className='text-lg font-normal text-slate-500'>WPM</span>
+              </p>
+            </div>
+          </div>
+          <div className='bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4'>
+            <div className='p-3 bg-emerald-50 text-emerald-600 rounded-lg'>
+              <Eye size={28} />
+            </div>
+            <div>
+              <p className='text-sm text-slate-500 font-medium'>Eye Contact Maintained</p>
+              <p className='text-2xl font-bold text-slate-900'>
+                {stats.gazePercentage}% <span className='text-lg font-normal text-slate-500'>of session</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className='bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex-1'>
+          <h3 className='text-lg font-semibold text-slate-800 mb-6'>Performance Timeline</h3>
+          <div className='h-72 w-full' style={{ minWidth: '300px', minHeight: '250px' }}>
+            <ResponsiveContainer width='100%' height='100%' minWidth={100} minHeight={100}>
+              <LineChart data={MOCK_SESSION_DATA} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray='3 3' vertical={false} stroke='#e2e8f0' />
+                <XAxis
+                  dataKey='time'
+                  type='number'
+                  domain={[0, 60]}
+                  tickCount={13}
+                  stroke='#94a3b8'
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tickFormatter={(val) => `${val}s`}
+                />
+                <YAxis
+                  domain={['dataMin - 20', 'dataMax + 20']}
+                  stroke='#94a3b8'
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tickFormatter={(val) => `${val} WPM`}
+                  width={80}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                {MOCK_DISTRACTIONS.map((time, index) => (
+                  <ReferenceLine key={index} x={time} stroke='#fbbf24' strokeDasharray='4 4' />
+                ))}
+                <Line
+                  type='monotone'
+                  dataKey='wpm'
+                  stroke='#cbd5e1'
+                  strokeWidth={2}
+                  dot={<GazeDot />}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  isAnimationActive
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className='w-full max-w-5xl mx-auto p-4 font-sans'>
+      {view === 'setup' && renderSetup()}
+      {view === 'prep' && (
+        <div className='rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center'>
+          <h2 className='text-2xl font-semibold text-[var(--on-surface)] mb-3'>Prompt Here</h2>
+          <p className='text-sm text-[var(--muted)] mb-2'>Starting in {timeLeft}s. Stay focused!</p>
+          {recordingMode === 'video' ? (
+            cameraActive ? (
+              <div className='mt-4 mx-auto w-full max-w-3xl rounded-xl overflow-hidden border border-[var(--border)]'>
+                <Webcam
+                  audio
+                  ref={webcamRef}
+                  mirrored
+                  screenshotFormat='image/jpeg'
+                  videoConstraints={{ width: 1280, height: 720, frameRate: 10 }}
+                  className='h-[420px] w-full object-cover'
+                />
+              </div>
+            ) : (
+              <p className='mt-4 text-sm text-[var(--muted)]'>Camera preview unavailable during prep. Please enable camera if needed.</p>
+            )
+          ) : (
+            <p className='mt-4 text-sm text-[var(--muted)]'>Audio-only session: recording audio track only.</p>
+          )}
+        </div>
+      )}
+      {view === 'recording' && renderRecording()}
+      {view === 'results' && renderResults()}
+    </div>
+  );
 }

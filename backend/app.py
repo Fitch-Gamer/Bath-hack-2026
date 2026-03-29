@@ -6,6 +6,7 @@ from pathlib import Path
 import sqlite3
 import re
 import uuid
+from datetime import datetime
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "users.db"
@@ -21,6 +22,8 @@ app.config["SUPPORTS_CREDENTIALS"] = True
 CORS(app, supports_credentials=True)
 
 UPLOAD_DIR.mkdir(exist_ok=True)
+(UPLOAD_DIR / "audio").mkdir(exist_ok=True)
+(UPLOAD_DIR / "video").mkdir(exist_ok=True)
 
 
 def get_db_connection():
@@ -31,33 +34,19 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
-    conn.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+    # Prefer executing SQL from schema.sql so schema can be managed separately.
+    schema_path = BASE_DIR / "schema.sql"
 
-        CREATE TABLE IF NOT EXISTS sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            session_token TEXT NOT NULL UNIQUE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            expires_at TIMESTAMP NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
+    schema = schema_path.read_text(encoding="utf-8")
 
-        CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            processed BOOLEAN NOT NULL DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
-        """
-    )
+    # Ensure statements end with semicolons for executescript.
+    try:
+        schema = re.sub(r"\)\s*(\n|$)", ");\n", schema)
+    except Exception:
+        # if something goes wrong with normalization, fall back to raw schema
+        pass
+
+    conn.executescript(schema)
     conn.commit()
     conn.close()
 
@@ -327,19 +316,47 @@ def upload_video():
 
     if video_file.filename == "":
         return jsonify({"error": "No video file selected."}), 400
-
     safe_name = secure_filename(video_file.filename)
-    filename = f"{uuid.uuid4().hex}_{safe_name}"
-    save_path = UPLOAD_DIR / filename
+    ext = Path(safe_name).suffix or ".webm"
+    uniquefilename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{session.get('user_id','anon')}_{uuid.uuid4().hex}{ext}"
+    save_path = UPLOAD_DIR / "video" / uniquefilename
 
     video_file.save(save_path)
 
     return jsonify(
         {
             "message": "Video uploaded successfully.",
-            "filename": filename,
+            "filename": uniquefilename,
         }
     )
+
+
+@app.post("/api/upload")
+def upload():
+    # Generic upload endpoint used by the frontend. Expects form field 'file'.
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided. Use field name 'file'."}), 400
+
+    f = request.files['file']
+    if f.filename == "":
+        return jsonify({"error": "No file selected."}), 400
+
+    safe_name = secure_filename(f.filename)
+    ext = Path(safe_name).suffix or ''
+
+    # Determine target subfolder by mimetype or extension
+    content_type = (f.mimetype or '').lower()
+    if content_type.startswith('audio') or ext in ['.mp3', '.wav', '.m4a', '.aac', '.ogg']:
+        sub = 'audio'
+    else:
+        sub = 'video'
+
+    uniquefilename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{session.get('user_id','anon')}_{uuid.uuid4().hex}{ext}"
+    save_path = UPLOAD_DIR / sub / uniquefilename
+
+    f.save(save_path)
+
+    return jsonify({"message": "File uploaded successfully.", "filename": uniquefilename})
 
 
 @app.post("/api/analyse")
@@ -421,6 +438,42 @@ def testset():
 @app.get("/api/testget")
 def testget():
     return jsonify({"message": f"session token: {session.get('test')}"})
+@app.post("/api/uploadpresentation")
+def upload_presentation():
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "You must be logged in to upload presentations."}), 401
+
+    data = request.get_json(silent=True) or {}
+    prompt = str(data.get("prompt", ""))
+    filepath = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{str(user_id)}"
+
+    video_file = request.files["video"]
+    audio_file = request.files["audio"]
+
+    video_file.save(UPLOAD_DIR / "video" / f"{filepath}.webm")
+    audio_file.save(UPLOAD_DIR / "audio" / f"{filepath}.webm")
+    
+
+    # insert a new reports row referencing the uploaded file
+    conn = get_db_connection()
+    cursor = conn.execute(
+        "INSERT INTO reports (user_id, filepath, used_prompt, presentation_length_seconds, prep_length_seconds) VALUES (?, ?, ?, ?)",
+        (
+            user_id,
+            filepath,
+            prompt,
+            data.get("presentation_length_seconds", 0),
+            data.get("prep_length_seconds", 0),
+        ),
+    )
+    conn.commit()
+    report_id = cursor.lastrowid
+    conn.close()
+
+    return jsonify({"message": "Presentation registered.", "report_id": report_id, "filename": filepath})
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
