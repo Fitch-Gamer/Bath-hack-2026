@@ -37,7 +37,16 @@ def main(input_path: str):
             frame_count += 1
 
     print(f"Processed {frame_count} frames in {time.time() - start_time} seconds.")
-    return sum(gaze_history) / len(gaze_history)
+
+    gaze_array = np.array(gaze_history)
+    mode_list = []
+
+    for start in range(0, len(gaze_array), 10):
+        batch = gaze_array[start:start + 10]
+        batch_mode = bool(np.round(batch.mean()))
+        mode_list.append(batch_mode)
+
+    return ",".join(str(val) for val in mode_list)
 
 
 if __name__ == "__main__":
