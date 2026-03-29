@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 
 type Report = {
   id?: string | number
-  date: string
+  created_at: string
   report: string
   processed: boolean
 }
@@ -55,7 +55,7 @@ export default function Reports() {
             <tbody>
               {reports.map((r, idx) => (
                 <tr key={(r.id as string) || idx} className="odd:bg-white even:bg-gray-50">
-                  <td className="px-4 py-2 align-top border">{new Date(r.date).toLocaleString()}</td>
+                  <td className="px-4 py-2 align-top border">{new Date(r.created_at).toLocaleString()}</td>
                   <td className="px-4 py-2 align-top border whitespace-pre-wrap">{r.processed? "Processed" : "Pending"}</td>
                 </tr>
               ))}

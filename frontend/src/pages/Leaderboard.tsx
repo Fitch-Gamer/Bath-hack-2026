@@ -22,7 +22,7 @@ export default function Leaderboard(): JSX.Element {
 			})
 			.then((json) => {
 				if (!mounted) return;
-				if (Array.isArray(json)) setData(json);
+				if (Array.isArray(json["leaderboard"])) setData(json["leaderboard"]);
 				else if (json && typeof json === "object" && Array.isArray((json as any).data)) setData((json as any).data);
 				else setError("Unexpected response format from /api/leaderboard");
 			})
