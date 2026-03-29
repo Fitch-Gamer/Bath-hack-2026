@@ -1,3 +1,4 @@
+import argparse
 import time
 from pathlib import Path
 
@@ -45,4 +46,9 @@ def main(input_path: str):
 
 
 if __name__ == "__main__":
-    main("input.webm")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--webm', type=str, required=True)
+    args = parser.parse_args()
+
+    result = main(args.webm)
+    print(result)
