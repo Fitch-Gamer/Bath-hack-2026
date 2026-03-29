@@ -299,7 +299,7 @@ export default function PresentationMock() {
     return (
       <div className='flex flex-col items-center justify-center min-h-[600px] bg-[var(--card)] text-[var(--on-surface)] p-8 rounded-xl shadow-[var(--shadow)] border border-[var(--border)]'>
         <h1 className='text-3xl font-bold text-[var(--on-surface)] mb-4'>{settings.recordDuration}-Second Pressure Drill</h1>
-        <p className='text-sm mb-8 max-w-md text-center'>
+        <p className='text-sm mb-8 max-w-md text-center text-[var(--muted)]'>
           You will be presented with a prompt. Speak continuously for {settings.recordDuration} seconds. The app tracks pace, eye contact, and random audio distractions.
         </p>
 
@@ -331,7 +331,7 @@ export default function PresentationMock() {
         ) : (
           <div className='rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 space-y-3'>
             <p className='text-[var(--on-surface)]'>
-              {settings.useCamera ? 'Camera preview initializing; please allow camera access.' : 'Camera preview is disabled in settings.'}
+              {settings.useCamera ? 'Camera preview initialising; please allow camera access.' : 'Camera preview is disabled in settings.'}
             </p>
             <div className='flex flex-wrap gap-2'>
               <button
@@ -357,11 +357,11 @@ export default function PresentationMock() {
     const isVideo = recordingMode === 'video';
 
     return (
-      <div className='flex flex-col min-h-[600px] bg-[var(--surface)] text-[var(--on-surface)] p-6 rounded-xl relative overflow-hidden'>
+      <div className='flex flex-col min-h-[600px] bg-[var(--surface)] text-[var(--on-surface)] border border-[var(--border)] p-6 rounded-xl relative overflow-hidden'>
         <div className='absolute inset-0 bg-[var(--card)]' />
         <div className='relative z-10 w-full max-w-3xl mx-auto'>
           <div className='mb-4'>
-            <p className='font-semibold'>Recording in progress ({recordingMode === 'audio' ? 'audio only' : 'video'})</p>
+            <p className='text-3xl font-semibold'>Recording in progress ({recordingMode === 'audio' ? 'audio only' : 'video'})</p>
             <p className='text-xs text-[var(--muted)]'>Remaining: {timeLeft}s</p>
           </div>
 
@@ -378,14 +378,14 @@ export default function PresentationMock() {
                 />
               </div>
             ) : (
-              <div className='mb-4 rounded-xl border border-slate-700 bg-slate-800 p-6 text-center'>
+              <div className='mb-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 text-center'>
                 <p className='text-slate-200'>Camera preview unavailable during recording.</p>
               </div>
             )
           ) : (
-            <div className='mb-4 rounded-xl border border-slate-700 bg-slate-800 p-6 text-center'>
-              <p className='text-slate-200'>Audio-only recording; no video captured.</p>
-              <p className='text-sm text-slate-400 mt-1'>The system captures microphone input and saves separately.</p>
+            <div className='mb-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-center'>
+              <p className='text-sm text-[var(--on-surface)]'>Audio-only recording; no video captured.</p>
+              <p className='text-sm text-[var(--on-surface)] mt-1'>The system captures microphone input and saves separately.</p>
             </div>
           )}
 
@@ -412,11 +412,11 @@ export default function PresentationMock() {
     const stats = sessionStats.avgWpm === 0 ? calculateStats() : sessionStats;
 
     return (
-      <div className='flex flex-col min-h-[600px] bg-[var(--surface)] text-[var(--on-surface)] p-8 rounded-xl border border-[var(--border)] shadow-sm'>
+      <div className='flex flex-col min-h-[600px] bg-[var(--card)] text-[var(--on-surface)] p-8 rounded-xl border border-[var(--border)] shadow-sm'>
         <div className='flex justify-between items-end mb-8'>
           <div>
-            <h2 className='text-3xl font-bold text-[var(--on-surface)]'>Session Analysis</h2>
-            <p className='text-[var(--on-surface)] mt-1'>Review your session performance.</p>
+            <h2 className='text-3xl font-bold text-[var(--on-card)]'>Session Analysis</h2>
+            <p className='text-[var(--muted)] mt-2'>Review your session performance.</p>
           </div>
           <button
             onClick={() => {
@@ -425,14 +425,14 @@ export default function PresentationMock() {
               setIsRecording(false);
               setTimeLeft(settings.recordDuration);
             }}
-            className='flex items-center gap-2 text-sm font-medium text-[var(--on-surface)] hover:text-blue-600 transition-colors'
+            className='flex items-center gap-2 text-sm font-medium text-[var(--muted)] hover:text-blue-600 transition-colors'
           >
             New Session
           </button>
         </div>
 
         <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>
-          <div className='bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4'>
+          <div className='bg-[var(--card)] p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4'>
             <div className='p-3 bg-blue-50 text-blue-600 rounded-lg'>
               <Activity size={28} />
             </div>
