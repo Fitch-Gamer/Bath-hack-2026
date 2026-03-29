@@ -16,11 +16,7 @@ def main(input_path: str):
     if not capture.isOpened():
         raise IOError(f"Cannot open {input_path}!")
 
-    pipeline = Pipeline(
-        weights=Path("models/L2CSNet_gaze360.pkl"),
-        arch="ResNet50",
-        device=select_device("cpu"),
-    )
+    pipeline = Pipeline(weights=Path("models/L2CSNet_gaze360.pkl"), arch="ResNet50", device=select_device("cpu"), )
 
     gaze_history = []
     frame_count = 0
@@ -39,7 +35,6 @@ def main(input_path: str):
                 gaze_history.append(is_looking)
 
             frame_count += 1
-            print(f"Frame: {frame_count:>5} | is_looking: {is_looking}")
 
     print(f"Processed {frame_count} frames in {time.time() - start_time} seconds.")
     return sum(gaze_history) / len(gaze_history)
