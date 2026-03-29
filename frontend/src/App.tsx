@@ -10,6 +10,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Reports from './pages/Reports';
+import Leaderboard from './pages/Leaderboard';
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -63,6 +64,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
           </Routes>
         </main>
       </div>
