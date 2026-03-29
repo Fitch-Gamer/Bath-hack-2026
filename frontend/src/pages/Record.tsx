@@ -105,6 +105,7 @@ export default function PresentationMock() {
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStats, setSessionStats] = useState({ avgWpm: 0, gazePercentage: 0 });
   const webcamRef = useRef<Webcam>(null);
+  const [prompt, setPrompt] = useState('Prompt Here');
   const activeStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -141,8 +142,9 @@ export default function PresentationMock() {
       setPermissionsGranted(false);
     }
   };
-
+/*
   const recordSnapshot = (blob: Blob, mode: 'video' | 'audio') => {
+    // deprecated single-file uploader left for backwards compatibility
     const formData = new FormData();
     formData.append('file', blob, mode === 'audio' ? 'session-audio.webm' : 'session-video.webm');
 
@@ -150,6 +152,32 @@ export default function PresentationMock() {
       method: 'POST',
       body: formData,
     }).catch((err) => console.error('Upload failed', err));
+  };
+*/
+  const uploadPresentation = async (blob: Blob, mode: 'video' | 'audio') => {
+    try {
+      const fd = new FormData();
+      if (mode === 'video') {
+        fd.append('video', blob, 'presentation-video.webm');
+      } else {
+        fd.append('audio', blob, 'presentation-audio.webm');
+      }
+
+      // include other metadata
+      fd.append('prompt', prompt || '');
+      fd.append('presentation_length', String(settings.recordDuration));
+      fd.append('prep_length', String(settings.prepDuration));
+
+      // POST to backend uploadpresentation route (use relative path so nginx proxy works)
+      const res = await fetch('http://localhost:5000/api/uploadpresentation', { method: 'POST', credentials: 'include', body: fd });
+      if (!res.ok) {
+        console.error('Presentation upload failed', await res.text());
+      } else {
+        console.log('Presentation uploaded successfully');
+      }
+    } catch (err) {
+      console.error('Upload error', err);
+    }
   };
 
   const stopRecording = () => {
@@ -224,7 +252,9 @@ export default function PresentationMock() {
 
     mediaRecorder.onstop = () => {
       const blob = new Blob(recordedChunksRef.current, { type: recordingMode === 'audio' ? 'audio/webm' : 'video/webm' });
-      recordSnapshot(blob, recordingMode);
+      //recordSnapshot(blob, recordingMode);
+      // attempt to upload presentation (video or audio) with metadata
+      uploadPresentation(blob, recordingMode);
     };
 
     mediaRecorder.start(100);
@@ -302,6 +332,16 @@ export default function PresentationMock() {
         <p className='text-sm mb-8 max-w-md text-center text-[var(--muted)]'>
           You will be presented with a prompt. Speak continuously for {settings.recordDuration} seconds. The app tracks pace, eye contact, and random audio distractions.
         </p>
+
+        <div className='mb-6 w-full max-w-md'>
+          <label className='block text-sm text-[var(--muted)] mb-2'>Prompt</label>
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className='w-full p-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--on-surface)]'
+            rows={3}
+          />
+        </div>
 
         {cameraReady ? (
           <div className='relative w-full max-w-3xl rounded-xl overflow-hidden border border-[var(--border)]'>
@@ -504,7 +544,7 @@ export default function PresentationMock() {
       {view === 'setup' && renderSetup()}
       {view === 'prep' && (
         <div className='rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center'>
-          <h2 className='text-2xl font-semibold text-[var(--on-surface)] mb-3'>Prompt Here</h2>
+          <h2 className='text-2xl font-semibold text-[var(--on-surface)] mb-3'>{prompt}</h2>
           <p className='text-sm text-[var(--muted)] mb-2'>Starting in {timeLeft}s. Stay focused!</p>
           {recordingMode === 'video' ? (
             cameraActive ? (

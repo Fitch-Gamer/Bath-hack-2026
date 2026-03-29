@@ -16,6 +16,8 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "bath-hack-dev-secret-change-later"
 app.config["SUPPORTS_CORS"] = True
 app.config["SUPPORTS_CREDENTIALS"] = True
+# Allow large uploads (e.g. video files). Set to 300MB.
+app.config["MAX_CONTENT_LENGTH"] = 300 * 1024 * 1024
 
 
 
@@ -451,7 +453,7 @@ def list_reports():
 
 @app.post("/api/uploadpresentation")
 def upload_presentation():
-    user_id = session.get("user_id")
+    user_id = session["user_id"]
 
     if not user_id:
         return jsonify({"error": "You must be logged in to upload presentations."}), 401
@@ -460,17 +462,18 @@ def upload_presentation():
     prompt = str(data.get("prompt", ""))
     filepath = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{str(user_id)}"
 
-    video_file = request.files["video"]
-    audio_file = request.files["audio"]
-
-    video_file.save(UPLOAD_DIR / "video" / f"{filepath}.webm")
-    audio_file.save(UPLOAD_DIR / "audio" / f"{filepath}.webm")
+    if ("video" in request.files ):     
+        video_file = request.files["video"]
+        video_file.save(UPLOAD_DIR / "video" / f"{filepath}.webm")
+    else:
+        audio_file = request.files["audio"]
+        audio_file.save(UPLOAD_DIR / "audio" / f"{filepath}.webm")
     
 
     # insert a new reports row referencing the uploaded file
     conn = get_db_connection()
     cursor = conn.execute(
-        "INSERT INTO reports (user_id, filepath, used_prompt, presentation_length_seconds, prep_length_seconds) VALUES (?, ?, ?, ?)",
+        "INSERT INTO reports (user_id, filepath, used_prompt, presentation_length_seconds, prep_length_seconds) VALUES (?, ?, ?, ?, ?)",
         (
             user_id,
             filepath,
