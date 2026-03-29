@@ -48,6 +48,25 @@ def init_db():
 
     conn.executescript(schema)
     conn.commit()
+
+    # Ensure users table contains the expected columns when schema evolves.
+    expected_columns = {
+        "recording_time_seconds": "INTEGER DEFAULT 60",
+        "prep_time_seconds": "INTEGER DEFAULT 15",
+        "bio": "TEXT",
+        "camera_enabled": "BOOLEAN DEFAULT TRUE",
+        "gaze_enabled": "BOOLEAN DEFAULT TRUE",
+        "disfluency_enabled": "BOOLEAN DEFAULT TRUE",
+        "report_metrics_enabled": "BOOLEAN DEFAULT TRUE",
+    }
+
+    existing_columns = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+
+    for col, col_def in expected_columns.items():
+        if col not in existing_columns:
+            conn.execute(f"ALTER TABLE users ADD COLUMN {col} {col_def}")
+            conn.commit()
+
     conn.close()
 
 
@@ -483,23 +502,28 @@ def save_settings():
     report_metrics_enabled = data.get("report_metrics_enabled")
 
     conn = get_db_connection()
-    conn.execute(
-        "UPDATE users SET recording_time_seconds = ?, prep_time_seconds = ?, bio = ?, camera_enabled = ?, gaze_enabled = ?, disfluency_enabled = ?, report_metrics_enabled = ? WHERE id = ?",
-        (
-            recording_time_seconds,
-            prep_time_seconds,
-            bio,
-            bool(camera_enabled),
-            bool(gaze_enabled),
-            bool(disfluency_enabled),
-            bool(report_metrics_enabled),
-            user_id,
-        ),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn.execute(
+            "UPDATE users SET recording_time_seconds = ?, prep_time_seconds = ?, bio = ?, camera_enabled = ?, gaze_enabled = ?, disfluency_enabled = ?, report_metrics_enabled = ? WHERE id = ?",
+            (
+                recording_time_seconds,
+                prep_time_seconds,
+                bio,
+                bool(camera_enabled),
+                bool(gaze_enabled),
+                bool(disfluency_enabled),
+                bool(report_metrics_enabled),
+                user_id,
+            ),
+        )
+        conn.commit()
 
-    return jsonify({"message": "Settings saved successfully."})
+        return jsonify({"message": "Settings saved successfully."})
+    except sqlite3.Error as e:
+        conn.rollback()
+        return jsonify({"error": "Failed to save settings.", "details": str(e)}), 500
+    finally:
+        conn.close()
 
 @app.post("/api/getsettings")
 def get_settings():
