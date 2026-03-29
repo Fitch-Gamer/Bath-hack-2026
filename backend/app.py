@@ -617,7 +617,7 @@ def save_settings():
 
 @app.post("/api/getsettings")
 def get_settings():
-    user_id = session.get("user_id")
+    user_id = session["user_id"]
 
     if not user_id:
         return jsonify({"error": "You must be logged in to get settings."}), 401
