@@ -28,7 +28,6 @@ function App() {
   return (
     <SettingsProvider>
       <Router>
-        <AuthGuard />
         <div className="min-h-screen w-full bg-[var(--surface)] text-[var(--on-surface)] transition-colors duration-300">
           <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 md:px-8">
             <h1 className="text-xl font-bold text-[var(--on-surface)]">BathHack 2026</h1>
@@ -43,6 +42,9 @@ function App() {
                 </Link>
                 <Link className="rounded-lg px-3 py-1 hover:bg-[var(--surface)]" to="/settings">
                   Settings
+                </Link>
+                <Link className="rounded-lg px-3 py-1 hover:bg-[var(--surface)]" to="/login">
+                  Login
                 </Link>
               </nav>
 

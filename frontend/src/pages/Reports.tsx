@@ -18,7 +18,7 @@ export default function Reports() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/listreports', {
+        const res = await fetch('http://52.56.138.157:5000/api/listreports', {
             credentials: 'include',
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

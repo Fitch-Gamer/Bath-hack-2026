@@ -10,7 +10,7 @@ const AuthGuard: React.FC = () => {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/me', {
+        const res = await fetch('http://52.56.138.157/:5000/api/me', {
           credentials: 'include',
         })
         if (!res.ok) {
