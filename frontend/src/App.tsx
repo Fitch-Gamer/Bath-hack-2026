@@ -30,7 +30,7 @@ function App() {
       <Router>
         <div className="min-h-screen w-full bg-[var(--surface)] text-[var(--on-surface)] transition-colors duration-300">
           <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 md:px-8">
-            <h1 className="text-xl font-bold text-[var(--on-surface)]">BathHack 2026</h1>
+            <h1 className="text-xl font-bold text-[var(--on-surface)]">Rhetorix</h1>
 
             <div className="flex items-center gap-3">
               <nav className="flex gap-2 text-sm font-semibold text-[var(--muted)]">
