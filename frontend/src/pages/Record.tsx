@@ -121,7 +121,7 @@ export default function PresentationMock() {
   useEffect(() => {
     const fetchPrompt = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/getprompt', {method: 'POST', credentials: 'include' });
+        const res = await fetch('http://52.56.138.157:5000/api/getprompt', {method: 'POST', credentials: 'include' });
         if (!res.ok) {
           console.warn('Failed to fetch prompt', res.status);
           return;
@@ -195,7 +195,7 @@ export default function PresentationMock() {
       fd.append('prep_length', String(settings.prepDuration));
 
       // POST to backend uploadpresentation route (use relative path so nginx proxy works)
-      const res = await fetch('http://localhost:5000/api/uploadpresentation', { method: 'POST', credentials: 'include', body: fd });
+      const res = await fetch('http://52.56.138.157:5000/api/uploadpresentation', { method: 'POST', credentials: 'include', body: fd });
       if (!res.ok) {
         console.error('Presentation upload failed', await res.text());
       } else {

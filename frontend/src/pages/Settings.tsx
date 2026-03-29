@@ -119,7 +119,7 @@ const Settings: React.FC = () => {
               setSaving(true);
               setSaveMessage('');
               try {
-                const res = await fetch('http://localhost:5000/api/savesettings', {
+                const res = await fetch('http://52.56.138.157:5000/api/savesettings', {
                   method: 'POST',
                   credentials: 'include',
                   headers: {
