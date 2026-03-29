@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 
 const DURATION_OPTIONS = [15, 30, 60] as const;
@@ -7,6 +7,8 @@ type DurationOption = (typeof DURATION_OPTIONS)[number];
 
 const Settings: React.FC = () => {
   const { settings, setSettings } = useSettings();
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   const update = (newSettings: Partial<typeof settings>) => setSettings((current) => ({ ...current, ...newSettings }));
 
@@ -109,6 +111,54 @@ const Settings: React.FC = () => {
             />
             Include metrics in report
           </label>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={async () => {
+              setSaving(true);
+              setSaveMessage('');
+              try {
+                const res = await fetch('http://localhost:5000/api/savesettings', {
+                  method: 'POST',
+                  credentials: 'include',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    recording_time_seconds: settings.recordDuration,
+                    prep_time_seconds: settings.prepDuration,
+                    bio: settings.userBio,
+                    camera_enabled: settings.useCamera,
+                    gaze_enabled: settings.enableGaze,
+                    disfluency_enabled: settings.enableDistractions,
+                    report_metrics_enabled: settings.includeMetrics,
+                  }),
+                });
+
+                if (!res.ok) {
+                  const errorData = await res.json().catch(() => ({}));
+                  throw new Error(errorData.error || 'Cannot save settings');
+                }
+
+                setSaveMessage('Settings successfully saved.');
+              } catch (error) {
+                setSaveMessage(`Save failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              } finally {
+                setSaving(false);
+              }
+            }}
+            disabled={saving}
+            className="rounded-lg bg-[var(--accent)] px-4 py-2 font-semibold text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save settings'}
+          </button>
+
+          {saveMessage && (
+            <span className={`text-sm ${saveMessage.startsWith('Save failed') ? 'text-red-500' : 'text-green-500'}`}>
+              {saveMessage}
+            </span>
+          )}
         </div>
 
         <div className="rounded-lg bg-[var(--surface)] p-4 text-sm text-[var(--muted)] border border-[var(--border)]">

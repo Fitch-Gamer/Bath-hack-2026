@@ -31,23 +31,41 @@ type SettingsContextValue = {
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [settings, setSettings] = useState<SettingsState>(() => {
-    if (typeof window === 'undefined') {
-      return defaultSettings;
-    }
-    try {
-      const stored = localStorage.getItem('recordingSettings');
-      if (!stored) return defaultSettings;
-      return { ...defaultSettings, ...JSON.parse(stored) };
-    } catch {
-      return defaultSettings;
-    }
-  });
+  const [settings, setSettings] = useState<SettingsState>(defaultSettings);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('recordingSettings', JSON.stringify(settings));
-  }, [settings]);
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/getsettings', {
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          return;
+        }
+
+        const data = await res.json();
+
+        setSettings({
+          recordDuration: [15, 30, 60].includes(data.recording_time_seconds)
+            ? data.recording_time_seconds
+            : defaultSettings.recordDuration,
+          prepDuration: [15, 30, 60].includes(data.prep_time_seconds)
+            ? data.prep_time_seconds
+            : defaultSettings.prepDuration,
+          userBio: data.bio ?? '',
+          useCamera: Boolean(data.camera_enabled),
+          enableGaze: Boolean(data.gaze_enabled),
+          enableDistractions: Boolean(data.disfluency_enabled),
+          includeMetrics: Boolean(data.report_metrics_enabled),
+        });
+      } catch {
+
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   const value = useMemo(() => ({ settings, setSettings }), [settings, setSettings]);
 
