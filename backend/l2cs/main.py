@@ -38,21 +38,20 @@ def main(input_path: str):
 
     print(f"Processed {frame_count} frames in {time.time() - start_time} seconds.")
 
-    gaze_array = np.array(gaze_history)
     mode_list = []
 
-    for start in range(0, len(gaze_array), 10):
-        batch = gaze_array[start:start + 10]
-        batch_mode = bool(np.round(batch.mean()))
+    for start in range(0, len(gaze_history), 10):
+        batch = gaze_history[start:start + 10]
+        batch_mode = bool(np.round(np.mean(batch)))
         mode_list.append(batch_mode)
 
-    return ",".join(str(val) for val in mode_list)
+    return ",".join(str(value) for value in mode_list)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--webm', type=str, required=True)
+    parser.add_argument('--video', type=str, required=True)
     args = parser.parse_args()
 
-    result = main(args.webm)
+    result = main(args.video)
     print(result)
