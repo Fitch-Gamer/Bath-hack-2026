@@ -37,6 +37,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const fetchSettings = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/getsettings', {
+          method: 'POST',
           credentials: 'include',
         });
 

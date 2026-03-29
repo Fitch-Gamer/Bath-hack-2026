@@ -105,7 +105,7 @@ export default function PresentationMock() {
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStats, setSessionStats] = useState({ avgWpm: 0, gazePercentage: 0 });
   const webcamRef = useRef<Webcam>(null);
-  const [prompt, setPrompt] = useState('Prompt Here');
+  const [prompt, setPrompt] = useState('Prompt loading...');
   const activeStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -117,6 +117,32 @@ export default function PresentationMock() {
   useEffect(() => {
     setTimeLeft(settings.recordDuration);
   }, [settings.recordDuration]);
+
+  useEffect(() => {
+    const fetchPrompt = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/getprompt', {method: 'POST', credentials: 'include' });
+        if (!res.ok) {
+          console.warn('Failed to fetch prompt', res.status);
+          return;
+        }
+
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const json = await res.json();
+          const value = typeof json === 'string' ? json : json.prompt ?? JSON.stringify(json);
+          setPrompt(value);
+        } else {
+          const text = await res.text();
+          setPrompt(text);
+        }
+      } catch (err) {
+        console.error('Error fetching prompt:', err);
+      }
+    };
+
+    fetchPrompt();
+  }, []);
 
   useEffect(() => {
     if (settings.useCamera && !cameraActive && !permissionsGranted && view === 'setup') {
@@ -333,15 +359,6 @@ export default function PresentationMock() {
           You will be presented with a prompt. Speak continuously for {settings.recordDuration} seconds. The app tracks pace, eye contact, and random audio distractions.
         </p>
 
-        <div className='mb-6 w-full max-w-md'>
-          <label className='block text-sm text-[var(--muted)] mb-2'>Prompt</label>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className='w-full p-2 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--on-surface)]'
-            rows={3}
-          />
-        </div>
 
         {cameraReady ? (
           <div className='relative w-full max-w-3xl rounded-xl overflow-hidden border border-[var(--border)]'>
