@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Webcam from 'react-webcam';
+import { useNavigate } from 'react-router-dom';
 import {
   LineChart,
   Line,
@@ -97,6 +98,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function PresentationMock() {
   const { settings, setSettings } = useSettings();
+  const navigate = useNavigate();
   const [view, setView] = useState<'setup' | 'prep' | 'recording' | 'results'>('setup');
   const [recordingMode, setRecordingMode] = useState<'video' | 'audio'>('video');
   const [permissionsGranted, setPermissionsGranted] = useState(false);
@@ -222,8 +224,9 @@ export default function PresentationMock() {
     }
 
     setIsRecording(false);
-    setView('results');
     setSessionStats(calculateStats());
+    // navigate to the reports page instead of rendering inline results
+    navigate('/reports');
   };
 
   const beginRecording = async () => {

@@ -6,6 +6,8 @@ type Report = {
   report: string
   processed: boolean
   score: number
+  time_percentage_at_camera: number
+  disfluency_string: string
 }
 
 export default function Reports() {
