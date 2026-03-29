@@ -5,6 +5,7 @@ type Report = {
   created_at: string
   report: string
   processed: boolean
+  score: number
 }
 
 export default function Reports() {
@@ -51,7 +52,7 @@ export default function Reports() {
             <thead>
               <tr className="bg-gray-100 text-left">
                   <th className="px-4 py-2 border">Date/Time</th>
-                  <th className="px-4 py-2 border">Report</th>
+                  <th className="px-4 py-2 border">Score</th>
                   <th className="px-4 py-2 border">Status / Actions</th>
                 </tr>
             </thead>
@@ -59,10 +60,10 @@ export default function Reports() {
               {reports.map((r, idx) => (
                 <tr key={(r.id as string) || idx} className="odd:bg-white even:bg-gray-50">
                   <td className="px-4 py-2 align-top border">{new Date(r.created_at).toLocaleString()}</td>
-                  <td className="px-4 py-2 align-top border whitespace-pre-wrap">{r.report}</td>
+                  <td className="px-4 py-2 align-top border whitespace-pre-wrap">{r.score}</td>
                   <td className="px-4 py-2 align-top border">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{r.processed ? 'Processed' : 'Pending'}</span>
+                      <span className="text-sm font-medium">{r.processed ? '' : 'Pending'}</span>
                       {r.processed && (
                         <button
                           onClick={() => { setSelectedReport(r); setModalOpen(true); }}

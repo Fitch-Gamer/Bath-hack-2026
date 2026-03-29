@@ -236,8 +236,8 @@ def processreport(report_id,filepath):
         # UPDATE the report row to mark as processed and store a score.
         conn = get_db_connection()
         conn.execute(
-            "UPDATE reports SET processed = true, score = ? WHERE id = ?",
-            (score, report_id),
+            "UPDATE reports SET processed = true, score = ?, camera_look_string = ?, time_percentage_at_camera = ? WHERE id = ?",
+            (score, gaze_response, truecount, report_id),
         )
         conn.commit()
         conn.close()
@@ -505,7 +505,7 @@ def list_reports():
 
     conn = get_db_connection()
     reports = conn.execute(
-        "SELECT id, processed, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC",
+        "SELECT id, processed, score, used_prompt, camera_look_string,  time_percentage_at_camera, distraction_time_seconds, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC",
         (user_id,),
     ).fetchall()
     conn.close()
@@ -517,6 +517,12 @@ def list_reports():
                     "id": r["id"],
                     "processed": bool(r["processed"]),
                     "created_at": r["created_at"],
+                    "score": r["score"],
+                    "used_prompt": r["used_prompt"],
+                    "camera_look_string": r["camera_look_string"],
+                    "time_percentage_at_camera": r["time_percentage_at_camera"],
+                    "distraction_time_seconds": r["distraction_time_seconds"],
+
                 }
                 for r in reports
             ]
