@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react'
 
 type Report = {
   id?: string | number
-  name: string
   date: string
   report: string
+  processed: boolean
 }
 
 export default function Reports() {
@@ -22,7 +22,7 @@ export default function Reports() {
         })
         if (!res.ok) throw new Error(`Status ${res.status}`)
         const data = await res.json()
-        setReports(Array.isArray(data) ? data : [])
+        setReports(Array.isArray(data["reports"]) ? data["reports"] : [])
       } catch (err: any) {
         setError(err?.message || 'Failed to fetch reports')
       } finally {
@@ -48,17 +48,15 @@ export default function Reports() {
           <table className="min-w-full bg-white border">
             <thead>
               <tr className="bg-gray-100 text-left">
-                <th className="px-4 py-2 border">Name</th>
-                <th className="px-4 py-2 border">Date</th>
+                <th className="px-4 py-2 border">Date/Time</th>
                 <th className="px-4 py-2 border">Report</th>
               </tr>
             </thead>
             <tbody>
               {reports.map((r, idx) => (
                 <tr key={(r.id as string) || idx} className="odd:bg-white even:bg-gray-50">
-                  <td className="px-4 py-2 align-top border">{r.name}</td>
                   <td className="px-4 py-2 align-top border">{new Date(r.date).toLocaleString()}</td>
-                  <td className="px-4 py-2 align-top border whitespace-pre-wrap">{r.report}</td>
+                  <td className="px-4 py-2 align-top border whitespace-pre-wrap">{r.processed? "Processed" : "Pending"}</td>
                 </tr>
               ))}
             </tbody>
