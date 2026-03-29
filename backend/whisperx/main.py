@@ -161,7 +161,15 @@ def main(input_path: str):
 
     timeline = build_timeline(duration, disfluencies, fillers, pauses)
 
-    return ",".join(str(value) for value in timeline)
+    duration_seconds = words[-1]["end"] if words else 0
+    n_steps = int(duration_seconds) + 1
+    pace_timeline = [0] * n_steps
+    for word in words:
+        start_sec = int(word["start"])
+        if start_sec < n_steps:
+            pace_timeline[start_sec] += 1
+
+    return ",".join(str(value) for value in timeline), pace_timeline
 
 
 if __name__ == "__main__":
@@ -169,5 +177,6 @@ if __name__ == "__main__":
     parser.add_argument("--wav", required=True)
     args = parser.parse_args()
 
-    result = main(args.wav)
-    print(result)
+    result, pace = main(args.wav)
+    print("Disfluency timeline:", result)
+    print("Pace (words/sec):", pace)
