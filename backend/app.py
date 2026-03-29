@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, session, send_from_directory, abort
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -7,7 +7,9 @@ import sqlite3
 import re
 import uuid
 from datetime import datetime
+import threading
 from llm.main import promptgen
+from gazeAI.main import gaze
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "users.db"
@@ -196,6 +198,64 @@ def build_flags(wpm, filler_words, long_pauses, eye_contact_score):
 
 init_db()
 
+def getvideo(filepath):
+    # Return a Path for a video inside the uploads/video directory.
+    # Protect against path traversal by only using the final path name (basename).
+    if not filepath:
+        return None
+    safe_name = Path(filepath).name
+    video_path = UPLOAD_DIR / "video" / safe_name
+    if not video_path.exists():
+        return None
+    return video_path
+
+
+def processreport(report_id,filepath):
+    # Background processing logic. This runs in a worker thread so the HTTP
+    # request can return immediately. Replace the placeholder work below with
+    # real analysis (transcription, metrics, gaze, etc.).
+    try:
+        # Placeholder: perform processing here (transcription, analysis, etc.)
+        # Example: compute a dummy score or call into other modules.
+        print("started")
+        gaze_response=gaze(f"{UPLOAD_DIR}/video/{filepath}.webm")
+
+        print(gaze_response)
+
+        gaze_array  = gaze_response.split(",")
+
+        truecount = 0
+        for value in gaze_array:
+            if value == "True":
+                truecount += 1
+        
+        truecount = truecount / len(gaze_array)
+
+        score = truecount*100
+
+        # UPDATE the report row to mark as processed and store a score.
+        conn = get_db_connection()
+        conn.execute(
+            "UPDATE reports SET processed = true, score = ? WHERE id = ?",
+            (score, report_id),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        # On error, still mark processed so frontend doesn't wait forever;
+        # in a real system you might add a retry or a 'failed' state column.
+        try:
+            conn = get_db_connection()
+            conn.execute(
+                "UPDATE reports SET processed = true WHERE id = ?",
+                (report_id,),
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+        print(f"processreport failed for {report_id}: {exc}")
+
 
 @app.get("/api/hello")
 def hello():
@@ -344,7 +404,7 @@ def upload_video():
     save_path = UPLOAD_DIR / "video" / uniquefilename
 
     video_file.save(save_path)
-
+    
     return jsonify(
         {
             "message": "Video uploaded successfully.",
@@ -379,6 +439,17 @@ def upload():
     f.save(save_path)
 
     return jsonify({"message": "File uploaded successfully.", "filename": uniquefilename})
+
+
+@app.get("/uploads/video/<path:filename>")
+def serve_uploaded_video(filename):
+    # Serve a video from the uploads/video directory.
+    # Use the safe resolver to avoid path traversal.
+    video_path = getvideo(filename)
+    if video_path is None:
+        return abort(404)
+
+    return send_from_directory(str(UPLOAD_DIR / "video"), video_path.name, as_attachment=False)
 
 
 @app.post("/api/analyse")
@@ -487,7 +558,16 @@ def upload_presentation():
     report_id = cursor.lastrowid
     conn.close()
 
-    return jsonify({"message": "Presentation registered.", "report_id": report_id, "filename": filepath})
+    # Start background processing and return immediately.
+    try:
+        t = threading.Thread(target=processreport, args=(report_id,filepath), daemon=True)
+        t.start()
+    except Exception:
+        # If background thread creation fails, continue and return the response
+        # so the frontend can retry processing later if desired.
+        print("Failed to start background processing thread for report", report_id)
+
+    return jsonify({"message": "Presentation registered.", "report_id": report_id, "filename": filepath, "processing": True})
 
 @app.post("/api/savesettings")
 def save_settings():
