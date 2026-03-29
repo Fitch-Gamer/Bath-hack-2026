@@ -14,8 +14,12 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "bath-hack-dev-secret-change-later"
+app.config["SUPPORTS_CORS"] = True
+app.config["SUPPORTS_CREDENTIALS"] = True
 
-CORS(app)
+
+
+CORS(app, supports_credentials=True)
 
 UPLOAD_DIR.mkdir(exist_ok=True)
 (UPLOAD_DIR / "audio").mkdir(exist_ok=True)
@@ -235,8 +239,9 @@ def register():
     )
 
 
-@app.post("/api/login")
+@app.route("/api/login", methods=["GET", "POST"])
 def login():
+    
     data = request.get_json(silent=True) or {}
 
     username = str(data.get("username", "")).strip()
@@ -257,8 +262,7 @@ def login():
 
     if not check_password_hash(user["password_hash"], password):
         return jsonify({"error": "Invalid username or password."}), 401
-
-    session.clear()
+    
     session["user_id"] = user["id"]
     session["username"] = user["username"]
 
@@ -401,7 +405,7 @@ def analyse():
 
 @app.post("/api/listreports")
 def list_reports():
-    user_id = session.get("user_id")
+    user_id = session["user_id"]
 
     if not user_id:
         return jsonify({"error": "You must be logged in to view reports."}), 401
@@ -426,6 +430,14 @@ def list_reports():
         }
     )
 
+@app.get("/api/testset")
+def testset():
+    session["test"] = "This is a test session value."
+    return jsonify({"message": "Test endpoint is working."})
+
+@app.get("/api/testget")
+def testget():
+    return jsonify({"message": f"session token: {session.get('test')}"})
 @app.post("/api/uploadpresentation")
 def upload_presentation():
     user_id = session.get("user_id")
