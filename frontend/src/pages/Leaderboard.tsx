@@ -10,7 +10,7 @@ export default function Leaderboard(): JSX.Element {
 
 	useEffect(() => {
 		let mounted = true;
-		const url = "http://52.56.138.157:5000/api/getleaderboard";
+		const url = "http://localhost:5000/api/getleaderboard";
 
 		fetch(url, {
 			method: 'POST',

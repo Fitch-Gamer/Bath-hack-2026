@@ -1,4 +1,13 @@
 import React, { useEffect, useState } from 'react'
+import {
+  ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts'
 
 type Report = {
   id?: string | number
@@ -8,6 +17,7 @@ type Report = {
   score: number
   time_percentage_at_camera: number
   disfluency_string: string
+  camera_look_string: string
 }
 
 export default function Reports() {
@@ -20,7 +30,7 @@ export default function Reports() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const res = await fetch('http://52.56.138.157:5000/api/listreports', {
+        const res = await fetch('http://localhost:5000/api/listreports', {
             credentials: 'include',
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -92,7 +102,45 @@ export default function Reports() {
             </div>
             <div className="p-4">
               <p className="text-sm text-gray-500">Created: {new Date(selectedReport.created_at).toLocaleString()}</p>
+              <p className="mt-2 text-sm text-gray-700">Score: {(selectedReport.score).toFixed(1)}</p>
+              <p className="mt-2 text-sm text-gray-700">Time looking at camera: {((selectedReport.time_percentage_at_camera <= 1 ? selectedReport.time_percentage_at_camera * 100 : selectedReport.time_percentage_at_camera)).toFixed(1)}%</p>
               <pre className="mt-4 whitespace-pre-wrap bg-gray-50 p-3 rounded text-sm">{selectedReport.report}</pre>
+              {/* Camera look chart: x = position index, y = boolean (0=false,1=true) */}
+              {selectedReport.camera_look_string && (
+                <div className="mt-4 h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart>
+                      <CartesianGrid />
+                      <XAxis
+                        dataKey="x"
+                        name="position"
+                        label={{ value: 'Position', position: 'insideBottom', offset: -5 }}
+                        type="number"
+                        domain={[0, 'dataMax']}
+                        allowDecimals={false}
+                      />
+                      <YAxis
+                        dataKey="y"
+                        name="look"
+                        ticks={[0, 1]}
+                        domain={[0, 1]}
+                        tickFormatter={(v) => (v === 1 ? 'true' : 'false')}
+                      />
+                      <Tooltip
+                        cursor={{ strokeDasharray: '3 3' }}
+                        formatter={(value: any, name: any) => {
+                          if (name === 'y') return [value === 1 ? 'true' : 'false', 'look']
+                          return [value, name]
+                        }}
+                      />
+                      <Scatter
+                        data={selectedReport.camera_look_string.split(',').map((s, i) => ({ x: i, y: s.trim().toLowerCase() === 'true' ? 1 : 0 }))}
+                        fill="#2563EB"
+                      />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           </div>
         </div>

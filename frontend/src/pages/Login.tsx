@@ -8,7 +8,7 @@ const Login: React.FC = () => {
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
 
-		const res = await fetch('http://52.56.138.157:5000/api/login', {
+		const res = await fetch('http://localhost:5000/api/login', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',
