@@ -6,8 +6,9 @@ import Record from './pages/Record';
 import './index.css';
 import Index from './pages/Index';
 import Settings from './pages/Settings';
-import Login from './pages/login';
+import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Reports from './pages/Reports';
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -59,6 +60,7 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/reports" element={<Reports />} />
           </Routes>
         </main>
       </div>

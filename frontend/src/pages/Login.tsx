@@ -7,29 +7,18 @@ const Login: React.FC = () => {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
-		try {
-			const res = await fetch('http://localhost:5000/api/login', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ username, password }),
-			})
 
-			if (!res.ok) {
-				const text = await res.text()
-				console.error('Login failed', res.status, text)
-				alert('Login failed')
-				return
-			}
+		const res = await fetch('http://localhost:5000/api/login', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			credentials: 'include',
+			body: JSON.stringify({ username, password }),
+		})
 
-			const data = await res.json()
-			console.log('login success', data)
-			if (data.token) {
-				localStorage.setItem('token', data.token)
-			}
+		if (res.ok) {
 			window.location.href = '/'
-		} catch (err) {
-			console.error('Login error', err)
-			alert('Login error')
+		} else {
+			alert('Login failed')
 		}
 	}
 
