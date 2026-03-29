@@ -7,6 +7,7 @@ import sqlite3
 import re
 import uuid
 from datetime import datetime
+from llm.main import promptgen
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "users.db"
@@ -576,6 +577,30 @@ def get_leaderboard():
             ]
         }
     )
+
+@app.post("/api/getprompt")
+def get_prompt():
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "You must be logged in to get a prompt."}), 401
+    # Fetch the user's bio from the database and use it as the prompt input.
+    conn = get_db_connection()
+    user = conn.execute("SELECT bio FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+
+    bio = (user["bio"] if user and user["bio"] is not None else "").strip()
+
+    # If no bio is set, use a generic fallback so promptgen receives meaningful context.
+    if not bio:
+        bio = f"User {session.get('username', 'anonymous')} - practicing on-camera communication."
+
+    try:
+        generated = promptgen(bio)
+    except Exception as e:
+        return jsonify({"error": "Failed to generate prompt.", "details": str(e)}), 500
+
+    return jsonify({"prompt": generated})
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

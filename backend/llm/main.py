@@ -9,7 +9,7 @@ load_dotenv()
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OPENROUTER_API_KEY"))
 
 
-def main(prompt):
+def promptgen(prompt):
     start_time = time.time()
 
     response = client.responses.create(model="gpt-5.4",
@@ -25,5 +25,5 @@ if __name__ == "__main__":
     parser.add_argument('--prompt', type=str, required=True)
     args = parser.parse_args()
 
-    result = main(args.prompt)
+    result = promptgen(args.prompt)
     print(result)
