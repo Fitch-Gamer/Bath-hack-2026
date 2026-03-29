@@ -530,5 +530,25 @@ def get_settings():
         }
     )
 
+@app.post("/api/getleaderboard")
+def get_leaderboard():
+    conn = get_db_connection()
+    leaderboard = conn.execute(
+        "SELECT r.score as score, u.username as username FROM reports r JOIN users u ON r.user_id = u.id ORDER BY r.score DESC LIMIT 10"
+    ).fetchall()
+    conn.close()
+
+    return jsonify(
+        {
+            "leaderboard": [
+                {
+                    "username": row["username"],
+                    "score": row["score"],
+                }
+                for row in leaderboard
+            ]
+        }
+    )
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
