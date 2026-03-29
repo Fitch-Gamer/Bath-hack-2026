@@ -1,134 +1,79 @@
-# SPDX-FileCopyrightText: 2024 Idiap Research Institute <contact@idiap.ch>
-#
-# SPDX-FileContributor: Pierre Vuillecard  <pierre.vuillecard@idiap.ch>
-#
-# SPDX-License-Identifier: GPL-3.0-only
-
 import argparse
 import time
 
 import cv2
+import numpy as np
+import torch
 
-from src.utils_demo import (
-    FaceDetectorCV2,
-    FaceDetectorYUNET,
-    FaceTracker,
-    HGPredictor,
-    MediapipePredictor,
-    TrackHandler,
-    Visualizer,
-)
+from src.utils_demo import (FaceDetectorCV2, FaceTracker, HGPredictor, MediapipePredictor, TrackHandler, )
 
 
-def main(args):
-    # Instantiate
-    if args.face_detector == "YUNET":
-        face_detector = FaceDetectorYUNET()
-    elif args.face_detector == "CV2":
-        face_detector = FaceDetectorCV2()
-    else:
-        raise ValueError("Invalid face detector")
+def main(input_path: str):
+    capture = cv2.VideoCapture(input_path)
+    if not capture.isOpened():
+        raise IOError(f"Cannot open {input_path}!")
+
+    face_detector = FaceDetectorCV2()
     face_tracker = FaceTracker()
     face_predictor = MediapipePredictor()
     hg_predictor = HGPredictor("cpu")
     track_handler = TrackHandler(face_tracker)
-    visualizer = Visualizer(
-        draw_bbox=args.draw_bbox,
-        draw_landmarks=args.draw_landmarks,
-        draw_head_gesture=args.draw_head_gesture,
-    )
 
-    vid = cv2.VideoCapture(0)
-    while True:
-        # Capture the video frame
-        # by frame
-        start = time.time()
-        ret, frame = vid.read()
+    gesture_history = []
+    frame_count = 0
+    start_time = time.time()
 
-        frame_time = int(round(time.time() * 1000))
+    with torch.inference_mode():
+        while True:
+            success, frame = capture.read()
+            if not success:
+                break
 
-        # Detect faces
-        detection = face_detector.process_image(frame)
+            frame_time = int(round(time.time() * 1000))
 
-        # Track the faces
-        face_tracker.update(detection, frame_time)
+            detection = face_detector.process_image(frame)
+            face_tracker.update(detection, frame_time)
+            track_ids = face_tracker.get_tracks()
 
-        # Get the current track id
-        track_id = face_tracker.get_tracks()
+            for track_id in track_ids:
+                face_prediction = face_predictor.process_face(frame, face_tracker.tracks_store[track_id][-1])
+                face_tracker.tracks_store[track_id][-1].add_prediction(face_prediction)
 
-        # Detect the face landmarks in those faces
-        for track in track_id:
-            face_prediction = face_predictor.process_face(
-                frame, face_tracker.tracks_store[track][-1]
-            )
-            face_tracker.tracks_store[track][-1].add_prediction(face_prediction)
+            output_track = hg_predictor.process(face_tracker, track_ids)
+            track_handler.add_track_prediction(output_track)
 
-        output_track = hg_predictor.process(face_tracker, track_id)
-        track_handler.add_track_prediction(output_track)
+            if track_ids:
+                first_track_id = track_ids[0]
+                frame_gesture = output_track[first_track_id]
+            else:
+                frame_gesture = None
+            gesture_history.append(frame_gesture)
 
-        # Draw the output
-        frame = visualizer.process(frame, face_tracker, output_track)
+            frame_count += 1
 
-        # Draw real time fps
-        end = time.time()
-        fps = 1 / (end - start)
-        cv2.putText(
-            frame,
-            f"FPS {int(fps)} ",
-            (1650, 60),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            2,
-            (0, 255, 0),
-            2,
-            cv2.LINE_AA,
-        )
+    print(f"Processed {frame_count} frames in {time.time() - start_time} seconds.")
 
-        # Display the resulting frame
-        cv2.imshow("frame", frame)
+    mode_list = []
 
-        # the 'q' button is set as the
-        # quitting button you may use any
-        # desired button of your choice
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+    for start in range(0, len(gesture_history), 10):
+        batch = gesture_history[start:start + 10]
+        batch = [gesture["head_gesture"] for gesture in batch if gesture is not None]
 
-    # After the loop release the cap object
-    vid.release()
-    # Destroy all the windows
-    cv2.destroyAllWindows()
+        if batch:
+            values, counts = np.unique(batch, return_counts=True)
+            most_common = values[np.argmax(counts)]
+        else:
+            most_common = None
+
+        mode_list.append(most_common)
+
+    return ",".join(str(value) for value in mode_list)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run demo")
-    parser.add_argument(
-        "--face_detector",
-        type=str,
-        default="CV2",
-        help="Face detector CV2 is faster but less accurate if face more than 2m away",
-        choices=["YUNET", "CV2"],
-    )
-    parser.add_argument(
-        "--draw_bbox",
-        "--db",
-        type=bool,
-        default=True,
-        help="Draw bounding box",
-    )
-    parser.add_argument(
-        "--draw_landmarks",
-        "--dl",
-        type=bool,
-        default=True,
-        help="Draw landmarks",
-    )
-    parser.add_argument(
-        "--draw_head_gesture",
-        "--dhg",
-        type=bool,
-        default=True,
-        help="Draw head gesture",
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--video', type=str, required=True)
     args = parser.parse_args()
 
-    # run demo head gesture
-    main(args)
+    result = main(args.video)
+    print(result)
