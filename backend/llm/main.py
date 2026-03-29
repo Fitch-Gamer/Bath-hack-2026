@@ -6,7 +6,13 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OPENROUTER_API_KEY"))
+
+# Prefer OPENROUTER_API_KEY, fall back to OPENAI_API_KEY for compatibility with compose env
+api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise RuntimeError("OpenAI API key not set. Set OPENROUTER_API_KEY or OPENAI_API_KEY environment variable.")
+
+client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
 
 
 def promptgen(prompt):
